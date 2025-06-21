@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { gitaQuotes } from './quoteLibrary';
 import "./styles.css";
+import { questions } from './data/questions';
+import { personalityTypes, personalityInsights } from './data/personality';
+import { followupQuestions, followupInsights } from './data/followup';
+import { gitaGuidance } from './data/guidance';
+import { personalityPDFs } from './data/pdfs';
+import { calculateResult, wrapText } from './utils/quiz';
 
 const InnerMapApp = () => {
   // All data stored in React state instead of localStorage
@@ -35,242 +41,12 @@ const InnerMapApp = () => {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
 
   // Full 30 questions
-  const questions = [
-    { id: 1, category: 'Devotion', text: "Do you sometimes feel a longing you can't quite name or explain?", options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 4, category: 'Devotion', text: 'Do certain moments of beauty or kindness bring tears to your eyes?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 7, category: 'Devotion', text: 'Do you find peace when you stop trying to control outcomes?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 10, category: 'Devotion', text: "Have you ever felt the boundary between 'you' and 'everything else' dissolve?", options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 13, category: 'Devotion', text: 'Does seeing others suffer genuinely hurt your heart?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 16, category: 'Devotion', text: "Do you sometimes feel love so strong it's almost too much to contain?", options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 19, category: 'Devotion', text: "When someone calls you spiritual, do you feel they don't really know you?", options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 22, category: 'Devotion', text: 'Do beautiful moments feel like unexpected gifts?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 25, category: 'Devotion', text: 'Do you sometimes see something precious in every person you meet?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 28, category: 'Devotion', text: 'Do you ever feel overwhelming gratitude for existence itself?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 2, category: 'Knowledge', text: "Do you sometimes wonder if what you think is 'you' is actually real?", options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 5, category: 'Knowledge', text: 'Do thoughts sometimes feel like clouds passing through an open sky?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 8, category: 'Knowledge', text: "Do you find yourself wondering 'What is aware of my thoughts?'", options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 12, category: 'Knowledge', text: 'Do you feel drawn to understand the deepest truths about existence?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 15, category: 'Knowledge', text: 'Are you sometimes aware of an unchanging presence that watches all experience?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 18, category: 'Knowledge', text: 'Do you sometimes question the very nature of reality itself?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 21, category: 'Knowledge', text: "Do you feel that what you call 'mind' is actually empty space?", options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 24, category: 'Knowledge', text: 'Do you feel more real in moments of complete stillness?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 27, category: 'Knowledge', text: "Have you ever realized that the 'searcher' and the 'sought' are the same?", options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 30, category: 'Knowledge', text: 'Do you sometimes feel that all knowledge is actually remembering?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 3, category: 'Action', text: 'When you see something that needs doing, do you naturally step forward?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 6, category: 'Action', text: 'Do people naturally come to you when things get difficult?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 9, category: 'Action', text: "Do you sometimes act so naturally that you forget you're the one doing it?", options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 11, category: 'Action', text: "Do you sometimes act to help others without thinking what's in it for you?", options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 14, category: 'Action', text: "Do you sometimes give or serve so naturally you don't think about it?", options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 17, category: 'Action', text: 'Do you sense when your actions flow with something greater than your personal will?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 20, category: 'Action', text: 'Do you naturally take charge when situations become chaotic?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 23, category: 'Action', text: 'Can you work with full intensity while feeling completely detached from results?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 26, category: 'Action', text: 'Do you prefer taking decisive action over endless analysis?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] },
-    { id: 29, category: 'Action', text: 'Do you feel most alive when serving others or a greater cause?', options: ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'] }
-  ];
 
-  const personalityTypes = {
-    devotee_pure: {
-      name: 'The Pure Devotee',
-      subtitle: 'Lover of Divine',
-      description: 'You embody pure divine love and complete surrender to the highest truth.',
-      emoji: '🙏',
-      practices: [
-        'How can I dissolve completely in divine love today?',
-        'What would pure surrender look like in this moment?',
-        'How do I serve without any sense of doership?',
-        'What is blocking my heart from opening fully?',
-        'How can I see only the Divine in everything?'
-      ]
-    },
-    devotee_doer: {
-      name: 'The Devotee-Doer',
-      subtitle: 'Divine Servant in Action',
-      description: 'You express divine love through dedicated service and righteous action.',
-      emoji: '💝',
-      practices: [
-        'How can I serve the Divine through my work today?',
-        'What actions align with divine will?',
-        'How do I offer all results to the Divine?',
-        'Where is service needed most today?',
-        'How can I work without attachment to outcomes?'
-      ]
-    },
-    devotee_knowledge: {
-      name: 'The Devotee-Sage',
-      subtitle: 'Divine Lover-Knower',
-      description: 'You unite divine love with sacred wisdom and deep understanding.',
-      emoji: '🕊️',
-      practices: [
-        'What is the Divine trying to teach me today?',
-        'How does love and wisdom unite in my heart?',
-        'What is the nature of the Divine Self?',
-        'How do I know with the heart, not just the mind?',
-        'What illusions is love dissolving?'
-      ]
-    },
-    knowledge_doer: {
-      name: 'The Sage-Warrior',
-      subtitle: 'Wise Actor',
-      description: 'You combine deep wisdom with purposeful action in service of truth.',
-      emoji: '⚔️',
-      practices: [
-        'How do I act from wisdom rather than reactivity?',
-        'What actions serve the highest truth today?',
-        'How do I remain unattached while fully engaged?',
-        'What is my dharmic duty in this situation?',
-        'Where can wisdom be applied practically?'
-      ]
-    },
-    pure_doer: {
-      name: 'The Pure Karma Yogi',
-      subtitle: 'Selfless Actor',
-      description: 'You embody perfect action without attachment.',
-      emoji: '🌟',
-      practices: [
-        'How do I act without any sense of doership?',
-        'What would perfect selfless service look like?',
-        'How do I work without attachment to results?',
-        'Where can I serve most effectively today?',
-        'How do I become a pure instrument?'
-      ]
-    },
-    pure_knowledge: {
-      name: 'The Pure Jnani',
-      subtitle: 'Knower of Truth',
-      description: 'You embody pure wisdom and direct knowledge.',
-      emoji: '🧘',
-      practices: [
-        'Who am I beyond all identifications?',
-        'What is the nature of ultimate reality?',
-        'How do I rest in pure awareness?',
-        'What is real and what is illusion?',
-        'How do I abide in the Self?'
-      ]
-    } 
-  };
 
-  const personalityInsights = {
-    devotee_pure: [
-      'Let devotion be your guide in every moment.',
-      'Surrender fully to what is and notice the peace that follows.'
-    ],
-    devotee_doer: [
-      'Channel your love into acts of service today.',
-      'Small acts done with great love transform the world.'
-    ],
-    devotee_knowledge: [
-      'Let wisdom soften your heart into deeper compassion.',
-      'Contemplate how love and truth arise together.'
-    ],
-    knowledge_doer: [
-      'Apply your insights in practical ways for others.',
-      'Wise action is the bridge between understanding and service.'
-    ],
-    pure_doer: [
-      'Selfless work purifies the mind and opens the heart.',
-      'See if you can act without clinging to the outcome.'
-    ],
-    pure_knowledge: [
-      'Rest in awareness and notice the quiet joy within.',
-      'Let each experience reveal the truth of who you are.'
-    ]
-  };
 
-  const followupQuestions = {
-    devotee_pure: [
-      'Do you often feel a deep longing for union with the divine?',
-      'Does devotional music or chanting move you profoundly?',
-      'Do you easily offer your successes and failures to a higher power?',
-      'Does your heart expand during prayer or meditation?',
-      'Do you see love as the ultimate path to liberation?'
-    ],
-    devotee_doer: [
-      'Is serving others your primary expression of devotion?',
-      'Do you feel energized when acting on behalf of a noble cause?',
-      'Do you enjoy organizing service projects or community events?',
-      'Do you balance personal ambition with a sense of spiritual duty?',
-      'Do you often feel guided in your actions by divine inspiration?'
-    ],
-    devotee_knowledge: [
-      'Do you study spiritual texts to deepen your devotion?',
-      'Do insights into reality open your heart even more?',
-      'Do you prefer contemplation over rituals?',
-      'Does understanding spiritual principles motivate your service?',
-      'Is wisdom inseparable from love in your experience?'
-    ],
-    knowledge_doer: [
-      'Do you apply philosophical concepts directly in your life?',
-      'Does acting from clarity feel more important than emotional impulse?',
-      'Do you value discipline as a way to embody wisdom?',
-      'Do you seek mentors to refine your skills?',
-      'Is living your truth the highest form of knowledge?'
-    ],
-    pure_doer: [
-      'Do you act without expecting anything in return?',
-      'Does work feel natural when it benefits others?',
-      'Do you prefer direct action over introspection?',
-      'Do you feel most fulfilled when fully immersed in tasks?',
-      'Is detachment from results easy for you?'
-    ],
-    pure_knowledge: [
-      'Do you frequently inquire into "Who am I?"',
-      'Is inner silence more valuable than external achievements?',
-      'Do you naturally witness thoughts without identifying with them?',
-      'Does the idea of non-duality resonate deeply with you?',
-      'Do you feel that true knowledge cannot be expressed in words?'
-    ]
-  };
 
-  const followupInsights = {
-    devotee_pure: 'Your devotion is deep and heartfelt. Continue surrendering.',
-    devotee_doer: 'Service further opens your heart. Keep helping others.',
-    devotee_knowledge: 'Blend your love with wisdom for balanced growth.',
-    knowledge_doer: 'Act from clarity and let wisdom guide your deeds.',
-    pure_doer: 'Selfless action is your greatest teacher. Trust the flow.',
-    pure_knowledge: 'Abide as awareness and let silence reveal the truth.'
-  };
 
-  const personalityPDFs = {
-    devotee_pure: 'pdfs/devotee_pure.pdf',
-    devotee_doer: 'pdfs/devotee_doer.pdf',
-    devotee_knowledge: 'pdfs/devotee_knowledge.pdf',
-    knowledge_doer: 'pdfs/knowledge_doer.pdf',
-    pure_doer: 'pdfs/pure_doer.pdf',
-    pure_knowledge: 'pdfs/pure_knowledge.pdf'
-  };
 
-  const gitaGuidance = {
-    devotee_pure: {
-      verse: 'BG 9.22',
-      text: 'To those who are constantly devoted and worship Me with love, I give the understanding by which they can come to Me.',
-      guidance: 'Your path is pure devotion. Cultivate love and surrender.'
-    },
-    devotee_doer: {
-      verse: 'BG 3.9',
-      text: 'Work done as a sacrifice for the Supreme must be performed, otherwise work binds one to this material world.',
-      guidance: 'Let every action be an offering. Serve selflessly.'
-    },
-    devotee_knowledge: {
-      verse: 'BG 7.17',
-      text: 'Of these, the wise one who is in full knowledge in union with me through devotion is the best.',
-      guidance: 'Let wisdom illuminate your love.'
-    },
-    knowledge_doer: {
-      verse: 'BG 4.18',
-      text: 'One who sees inaction in action, and action in inaction, is intelligent among men.',
-      guidance: 'Act from clear understanding.'
-    },
-    pure_doer: {
-      verse: 'BG 2.47',
-      text: 'You have a right to perform your prescribed duty, but you are not entitled to the fruits of action.',
-      guidance: 'Focus on perfect action without attachment.'
-    },
-    pure_knowledge: {
-      verse: 'BG 4.38',
-      text: 'In this world, there is nothing so sublime and pure as transcendental knowledge.',
-      guidance: 'Seek the highest truth through inquiry.'
-    }
-  };
 
   useEffect(() => {
     setSelectedAnswer(answers[questionIndex] || null);
@@ -299,56 +75,6 @@ const InnerMapApp = () => {
     }
   };
 
-  const calculateResult = (allAnswers) => {
-    let devotionScore = 0;
-    let knowledgeScore = 0;
-    let actionScore = 0;
-
-    allAnswers.forEach((answer, index) => {
-      const score = ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'].indexOf(answer);
-      const question = questions[index];
-
-      if (question.category === 'Devotion') devotionScore += score;
-      if (question.category === 'Knowledge') knowledgeScore += score;
-      if (question.category === 'Action') actionScore += score;
-    });
-
-    const devotionPercent = Math.round((devotionScore / 40) * 100);
-    const knowledgePercent = Math.round((knowledgeScore / 40) * 100);
-    const actionPercent = Math.round((actionScore / 40) * 100);
-
-    let type;
-    if (devotionPercent >= 70 && devotionPercent > knowledgePercent + 15 && devotionPercent > actionPercent + 15) {
-      type = 'devotee_pure';
-    } else if (devotionPercent >= 55 && actionPercent >= 45 && devotionPercent > knowledgePercent) {
-      type = 'devotee_doer';
-    } else if (devotionPercent >= 55 && knowledgePercent >= 45 && devotionPercent > actionPercent) {
-      type = 'devotee_knowledge';
-    } else if (knowledgePercent >= 50 && actionPercent >= 45 && devotionPercent < 45) {
-      type = 'knowledge_doer';
-    } else if (actionPercent >= 70) {
-      type = 'pure_doer';
-    } else if (knowledgePercent >= 70) {
-      type = 'pure_knowledge';
-    } else {
-      if (devotionPercent >= knowledgePercent && devotionPercent >= actionPercent) {
-        type = 'devotee_doer';
-      } else if (knowledgePercent >= actionPercent) {
-        type = 'knowledge_doer';
-      } else {
-        type = 'pure_doer';
-      }
-    }
-
-    return {
-      type,
-      scores: {
-        devotion: devotionPercent,
-        knowledge: knowledgePercent,
-        action: actionPercent
-      }
-    };
-  };
 
   const getRandomInsight = (type) => {
     const list = personalityInsights[type] || [];
@@ -412,7 +138,7 @@ const InnerMapApp = () => {
       setSelectedAnswer(updated[nextIndex] || null);
       setIsTransitioning(false);
     } else {
-      const calculatedResult = calculateResult(updated);
+      const calculatedResult = calculateResult(updated, questions);
       setResult(calculatedResult);
       storeResult(calculatedResult);
       setDailyInsight(getRandomInsight(calculatedResult.type));
@@ -534,22 +260,6 @@ const InnerMapApp = () => {
   };
 
 
-  const wrapText = (ctx, text, maxWidth) => {
-    const words = text.split(" ");
-    const lines = [];
-    let line = "";
-    for (const word of words) {
-      const testLine = line + word + " ";
-      if (ctx.measureText(testLine).width > maxWidth && line) {
-        lines.push(line.trim());
-        line = word + " ";
-      } else {
-        line = testLine;
-      }
-    }
-    lines.push(line.trim());
-    return lines;
-  };
 
   const downloadQuoteCard = () => {
     if (!quote) return;
