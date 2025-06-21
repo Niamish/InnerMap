@@ -1,0 +1,21 @@
+.im-dark {
+  --bg: #1a202c;
+  --text: #f7fafc;
+}
+.im-dark body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+.im-dark .bg-white {
+  background-color: #2d3748 !important;
+  color: var(--text) !important;
+}
+.im-dark .bg-gray-50 {
+  background-color: #1a202c !important;
+}
+.im-dark .text-gray-800 {
+  color: #e2e8f0 !important;
+}
+.im-dark .text-gray-700 {
+  color: #cbd5e0 !important;
+}
