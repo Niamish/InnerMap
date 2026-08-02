@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { gitaQuotes } from './quoteLibrary';
-import "./styles.css";
+import './styles.css';
 import { questions } from './data/questions';
 import { personalityTypes, personalityInsights } from './data/personality';
 import { followupQuestions, followupInsights } from './data/followup';
@@ -8,8 +8,152 @@ import { gitaGuidance } from './data/guidance';
 import { personalityPDFs } from './data/pdfs';
 import { calculateResult, wrapText } from './utils/quiz';
 
+const answerScale = ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'];
+
+const iconPaths = {
+  home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5h5v5"/>',
+  compass: '<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2.1 4.9-4.9 2.1 2.1-4.9 4.9-2.1Z"/>',
+  practice: '<path d="M12 21c4.8-2.4 7-6.2 7-11.4V4l-7-2-7 2v5.6C5 14.8 7.2 18.6 12 21Z"/><path d="m9 12 2 2 4-5"/>',
+  profile: '<circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/>',
+  sun: '<circle cx="12" cy="12" r="3.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon: '<path d="M20 15.2A8.5 8.5 0 0 1 8.8 4a8.5 8.5 0 1 0 11.2 11.2Z"/>',
+  logout: '<path d="M10 17l5-5-5-5M15 12H3M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"/>',
+  arrowLeft: '<path d="m15 18-6-6 6-6"/>',
+  arrowRight: '<path d="m9 18 6-6-6-6"/>',
+  refresh: '<path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M6.1 8.5A7 7 0 0 1 18.4 6L20 12M4 12l1.6 6a7 7 0 0 0 12.3-2.5"/>',
+  share: '<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.6M8.2 13.2l7.6 4.6"/>',
+  download: '<path d="M12 3v12M7.5 10.5 12 15l4.5-4.5"/><path d="M4 20h16"/>',
+  book: '<path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H11v17H6.5A2.5 2.5 0 0 0 4 21.5v-17Z"/><path d="M20 4.5A2.5 2.5 0 0 0 17.5 2H13v17h4.5a2.5 2.5 0 0 1 2.5 2.5v-17Z"/>',
+  check: '<path d="m5 12 4.2 4L19 6.5"/>',
+  flame: '<path d="M13.5 2.5c.4 3-1 4.3-2.4 5.8-1.5 1.6-3 3.2-2.2 6 .4-1.3 1.2-2.2 2.1-3.1-.1 2.1 1 3.2 2.4 4.4 1.2 1 1.6 2.2 1.4 3.9 3-1.3 5.2-4 5.2-7.5 0-4.5-3-7.6-6.5-9.5Z"/><path d="M9.4 9.5C6.4 11 4 13.4 4 16.5A5.5 5.5 0 0 0 9.5 22c1.3 0 2.5-.4 3.5-1.2"/>',
+  trash: '<path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/>',
+  spark: '<path d="m12 2 1.6 5.1L19 9l-5.4 1.9L12 16l-1.6-5.1L5 9l5.4-1.9L12 2Z"/><path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/>',
+};
+
+const Icon = ({ name, size = 20 }) => (
+  <svg
+    className="icon"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.7"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    dangerouslySetInnerHTML={{ __html: iconPaths[name] || iconPaths.compass }}
+  />
+);
+
+const BrandMark = ({ compact = false }) => (
+  <span className={`brand-mark ${compact ? 'brand-mark--compact' : ''}`} aria-hidden="true">
+    <svg viewBox="0 0 48 48" fill="none">
+      <circle cx="24" cy="24" r="20.5" />
+      <circle cx="24" cy="24" r="8" />
+      <path d="M24 3.5v40M6.2 34.2 41.8 13.8M6.2 13.8l35.6 20.4" />
+      <circle cx="24" cy="24" r="2.2" className="brand-mark__core" />
+    </svg>
+  </span>
+);
+
+const CompassMap = ({ scores, compact = false, progress = 0 }) => {
+  const values = scores || { devotion: 72, knowledge: 62, action: 78 };
+  const axes = [
+    { key: 'devotion', label: 'Devotion', angle: -90 },
+    { key: 'knowledge', label: 'Knowledge', angle: 30 },
+    { key: 'action', label: 'Action', angle: 150 },
+  ];
+  const center = 150;
+  const maxRadius = 92;
+  const pointFor = (angle, radius) => {
+    const radians = (angle * Math.PI) / 180;
+    return `${center + Math.cos(radians) * radius},${center + Math.sin(radians) * radius}`;
+  };
+  const polygon = axes.map(({ key, angle }) => pointFor(angle, Math.max(18, values[key] * 0.92))).join(' ');
+
+  return (
+    <div className={`compass-map ${compact ? 'compass-map--compact' : ''}`}>
+      <svg viewBox="0 0 300 300" role="img" aria-label="Your three-path inner compass">
+        <defs>
+          <radialGradient id="compassGlow">
+            <stop offset="0" stopColor="var(--accent)" stopOpacity=".2" />
+            <stop offset="1" stopColor="var(--accent)" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <circle cx="150" cy="150" r="130" className="compass-map__halo" />
+        <circle cx="150" cy="150" r="102" className="compass-map__ring compass-map__ring--outer" />
+        <circle cx="150" cy="150" r="68" className="compass-map__ring" />
+        <circle cx="150" cy="150" r="34" className="compass-map__ring" />
+        <circle cx="150" cy="150" r="112" className="compass-map__progress-track" />
+        <circle
+          cx="150"
+          cy="150"
+          r="112"
+          pathLength="100"
+          className="compass-map__progress"
+          style={{ strokeDashoffset: 100 - progress }}
+        />
+        {axes.map(({ key, label, angle }) => {
+          const [x, y] = pointFor(angle, maxRadius).split(',');
+          const [lx, ly] = pointFor(angle, 122).split(',');
+          return (
+            <g key={key}>
+              <line x1="150" y1="150" x2={x} y2={y} className="compass-map__axis" />
+              <circle cx={x} cy={y} r="4.5" className={`compass-map__node compass-map__node--${key}`} />
+              <text x={lx} y={ly} className="compass-map__label" textAnchor="middle" dominantBaseline="middle">
+                {label}
+              </text>
+            </g>
+          );
+        })}
+        <polygon points={polygon} className="compass-map__shape" />
+        <circle cx="150" cy="150" r="37" fill="url(#compassGlow)" />
+        <circle cx="150" cy="150" r="7" className="compass-map__center" />
+        <circle cx="150" cy="150" r="2" className="compass-map__center-dot" />
+      </svg>
+    </div>
+  );
+};
+
+const ThemeButton = ({ darkMode, onClick, label = true }) => (
+  <button className="icon-button theme-button" type="button" onClick={onClick} aria-label={`Use ${darkMode ? 'light' : 'dark'} theme`}>
+    <Icon name={darkMode ? 'sun' : 'moon'} />
+    {label && <span>{darkMode ? 'Light' : 'Dark'}</span>}
+  </button>
+);
+
+const ScreenHeader = ({ eyebrow, title, description, action }) => (
+  <header className="screen-header">
+    <div>
+      <p className="eyebrow">{eyebrow}</p>
+      <h1>{title}</h1>
+      {description && <p className="screen-header__description">{description}</p>}
+    </div>
+    {action}
+  </header>
+);
+
+const ScoreRow = ({ label, value, index }) => (
+  <div className="score-row">
+    <div className="score-row__meta">
+      <span><i>{String(index).padStart(2, '0')}</i>{label}</span>
+      <strong>{value}%</strong>
+    </div>
+    <div className="score-row__track" aria-label={`${label}: ${value} percent`}>
+      <span style={{ '--score': `${value}%` }} />
+    </div>
+  </div>
+);
+
+const navItems = [
+  { id: 'dashboard', label: 'Map', icon: 'home' },
+  { id: 'quiz', label: 'Assess', icon: 'compass' },
+  { id: 'practices', label: 'Practice', icon: 'practice' },
+  { id: 'profile', label: 'Self', icon: 'profile' },
+];
+
 const InnerMapApp = () => {
-  // All data stored in React state instead of localStorage
   const [screen, setScreen] = useState('home');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,137 +168,119 @@ const InnerMapApp = () => {
   const [loginError, setLoginError] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [darkMode, setDarkMode] = useState(() =>
-    typeof window !== 'undefined'
-      ? localStorage.getItem('im-dark') === 'true'
-      : false
+    typeof window !== 'undefined' ? localStorage.getItem('im-dark') !== 'false' : true
   );
   const [dailyInsight, setDailyInsight] = useState('');
   const [guidance, setGuidance] = useState(null);
-  // Follow-up quiz state
   const [followupIndex, setFollowupIndex] = useState(0);
   const [followupAnswers, setFollowupAnswers] = useState([]);
-  const [quote, setQuote] = useState("");
+  const [quote, setQuote] = useState('');
   const [followupScore, setFollowupScore] = useState(null);
-
-  // Animation states for quiz
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [shareStatus, setShareStatus] = useState('');
 
-  // Full 30 questions
-
-
-
-
-
-
+  const personality = result ? personalityTypes[result.type] : null;
 
   useEffect(() => {
     setSelectedAnswer(answers[questionIndex] || null);
   }, [questionIndex, answers]);
 
   useEffect(() => {
-    if (typeof document !== 'undefined') {
-      document.documentElement.classList.toggle('im-dark', darkMode);
-      localStorage.setItem('im-dark', darkMode ? 'true' : 'false');
-    }
+    document.documentElement.classList.toggle('im-dark', darkMode);
+    localStorage.setItem('im-dark', darkMode ? 'true' : 'false');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', darkMode ? '#17130f' : '#f4efe5');
   }, [darkMode]);
 
   useEffect(() => {
-    if (isLoggedIn) {
-      loadStoredResult();
-    }
+    if (isLoggedIn) loadStoredResult();
   }, [isLoggedIn]);
 
-  const handleLogin = () => {
-    if (email && password) {
-      setIsLoggedIn(true);
-      setScreen('dashboard');
-      setLoginError('');
-    } else {
-      setLoginError('Please enter email and password.');
-    }
+  const navigate = (nextScreen) => {
+    setScreen(nextScreen);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
 
   const getRandomInsight = (type) => {
     const list = personalityInsights[type] || [];
     return list[Math.floor(Math.random() * list.length)] || '';
   };
 
-  const getRandomQuote = () => gitaQuotes[Math.floor(Math.random() * gitaQuotes.length)] || "";
-  const storeResult = (data) => {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('im-result', JSON.stringify(data));
+  const getRandomQuote = () => gitaQuotes[Math.floor(Math.random() * gitaQuotes.length)] || '';
+
+  const hydrateResult = (nextResult) => {
+    setResult(nextResult);
+    setDailyInsight(getRandomInsight(nextResult.type));
+    setQuote(getRandomQuote());
+    setGuidance(gitaGuidance[nextResult.type]);
+  };
+
+  const storeResult = (data) => localStorage.setItem('im-result', JSON.stringify(data));
+
+  const loadStoredResult = () => {
+    const stored = localStorage.getItem('im-result');
+    if (!stored) return;
+    try {
+      hydrateResult(JSON.parse(stored));
+    } catch (error) {
+      console.error('Failed to parse stored result', error);
+      localStorage.removeItem('im-result');
     }
   };
 
-  const loadStoredResult = () => {
-    if (typeof localStorage !== 'undefined') {
-      const stored = localStorage.getItem('im-result');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setResult(parsed);
-          setDailyInsight(getRandomInsight(parsed.type));
-          setQuote(getRandomQuote());
-          setGuidance(gitaGuidance[parsed.type]);
-        } catch (e) {
-          console.error('Failed to parse stored result', e);
-        }
-      }
+  const handleLogin = (event) => {
+    event.preventDefault();
+    if (!email || !password) {
+      setLoginError('Enter both fields to open your map.');
+      return;
     }
+    setIsLoggedIn(true);
+    setLoginError('');
+    navigate('dashboard');
   };
 
   const refreshInsight = () => {
-    if (result) {
-      setDailyInsight(getRandomInsight(result.type));
-      setQuote(getRandomQuote());
-      setGuidance(gitaGuidance[result.type]);
-    }
+    if (!result) return;
+    setDailyInsight(getRandomInsight(result.type));
+    setQuote(getRandomQuote());
   };
 
-  const handleNextQuestion = () => {
-    if (questionIndex < questions.length - 1) {
-      setQuestionIndex(questionIndex + 1);
-      setSelectedAnswer(answers[questionIndex + 1] || null);
-    }
-  };
-
-  const handlePreviousQuestion = () => {
-    if (questionIndex > 0) {
-      setQuestionIndex(questionIndex - 1);
-      setSelectedAnswer(answers[questionIndex - 1] || null);
-    }
+  const finishAssessment = (updatedAnswers) => {
+    const calculatedResult = calculateResult(updatedAnswers, questions);
+    hydrateResult(calculatedResult);
+    storeResult(calculatedResult);
+    navigate('result');
   };
 
   const handleAnswer = (answer) => {
+    if (isTransitioning) return;
     const updated = [...answers];
     updated[questionIndex] = answer;
     setAnswers(updated);
+    setSelectedAnswer(answer);
+    setIsTransitioning(true);
 
-    if (questionIndex < questions.length - 1) {
-      const nextIndex = questionIndex + 1;
-      setQuestionIndex(nextIndex);
-      setSelectedAnswer(updated[nextIndex] || null);
+    window.setTimeout(() => {
+      if (questionIndex < questions.length - 1) {
+        setQuestionIndex((current) => current + 1);
+      } else {
+        finishAssessment(updated);
+      }
       setIsTransitioning(false);
-    } else {
-      const calculatedResult = calculateResult(updated, questions);
-      setResult(calculatedResult);
-      storeResult(calculatedResult);
-      setDailyInsight(getRandomInsight(calculatedResult.type));
-      setQuote(getRandomQuote());
-      setGuidance(gitaGuidance[calculatedResult.type]);
-      setScreen('result');
-    }
+    }, 320);
   };
 
-  const resetQuiz = () => {
+  const handlePreviousQuestion = () => {
+    if (questionIndex === 0 || isTransitioning) return;
+    setQuestionIndex((current) => current - 1);
+  };
+
+  const beginAssessment = () => {
     setQuestionIndex(0);
     setAnswers([]);
-    setScreen('dashboard');
-    setIsTransitioning(false);
     setSelectedAnswer(null);
-    resetFollowup();
+    setIsTransitioning(false);
+    navigate('quiz');
   };
 
   const resetFollowup = () => {
@@ -168,42 +294,31 @@ const InnerMapApp = () => {
     const updated = [...followupAnswers];
     updated[followupIndex] = answer;
     setFollowupAnswers(updated);
-
     const list = followupQuestions[result.type] || [];
     if (followupIndex < list.length - 1) {
-      setFollowupIndex(followupIndex + 1);
-    } else {
-      const total = updated.reduce(
-        (sum, ans) =>
-          sum + ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'].indexOf(ans),
-        0
-      );
-      const percent = Math.round((total / (list.length * 4)) * 100);
-      setFollowupScore(percent);
-      setScreen('followupResult');
+      setFollowupIndex((current) => current + 1);
+      return;
     }
+    const total = updated.reduce((sum, item) => sum + answerScale.indexOf(item), 0);
+    setFollowupScore(Math.round((total / (list.length * 4)) * 100));
+    navigate('followupResult');
   };
 
   const handlePracticeComplete = (practiceIndex) => {
     const today = new Date().toDateString();
-    const newCompletedPractices = [...completedPractices, { date: today, practiceIndex }];
-    setCompletedPractices(newCompletedPractices);
+    if (completedPractices.some((item) => item.date === today && item.practiceIndex === practiceIndex)) return;
+    setCompletedPractices((current) => [...current, { date: today, practiceIndex }]);
+    if (lastPracticeDate === today) return;
 
-    if (lastPracticeDate !== today) {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      if (lastPracticeDate === yesterday.toDateString()) {
-        setStreak(streak + 1);
-        if (streak + 1 === 7) {
-          setAchievementText('7 Day Streak! 🔥');
-          setShowAchievement(true);
-          setTimeout(() => setShowAchievement(false), 3000);
-        }
-      } else {
-        setStreak(1);
-      }
-      setLastPracticeDate(today);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const nextStreak = lastPracticeDate === yesterday.toDateString() ? streak + 1 : 1;
+    setStreak(nextStreak);
+    setLastPracticeDate(today);
+    if (nextStreak === 7) {
+      setAchievementText('Seven days of steady practice');
+      setShowAchievement(true);
+      window.setTimeout(() => setShowAchievement(false), 3200);
     }
   };
 
@@ -212,683 +327,492 @@ const InnerMapApp = () => {
     setEmail('');
     setPassword('');
     setIsLoggedIn(false);
-    setResult(null);
-    setDailyInsight('');
-    setGuidance(null);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('im-result');
-    }
-    setStreak(0);
-    setLastPracticeDate(null);
-    setCompletedPractices([]);
-    setQuestionIndex(0);
-    setAnswers([]);
-    resetFollowup();
+    setLoginError('');
   };
 
   const handleResetData = () => {
-    if (window.confirm('Are you sure you want to reset all data?')) {
-      setResult(null);
-      setDailyInsight('');
-      setQuote('');
-      setGuidance(null);
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem('im-result');
-      }
-      setStreak(0);
-      setCompletedPractices([]);
-      setLastPracticeDate(null);
-      resetFollowup();
-      setScreen('dashboard');
-    }
+    if (!window.confirm('Reset your assessment, practices, and streak?')) return;
+    setResult(null);
+    setDailyInsight('');
+    setQuote('');
+    setGuidance(null);
+    localStorage.removeItem('im-result');
+    setStreak(0);
+    setCompletedPractices([]);
+    setLastPracticeDate(null);
+    resetFollowup();
+    navigate('dashboard');
   };
 
-  const shareResult = () => {
+  const shareResult = async () => {
     if (!result) return;
-    const personality = personalityTypes[result.type];
-    const text = `My InnerMap result: ${personality.name} - ${personality.subtitle}`;
+    const text = `My InnerMap: ${personality.name} — ${personality.subtitle}`;
     try {
-      if (navigator.share) {
-        navigator.share({ title: 'My InnerMap Result', text });
-      } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(text);
-        alert('Result copied to clipboard!');
+      if (navigator.share) await navigator.share({ title: 'My InnerMap', text });
+      else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        setShareStatus('Copied');
+        window.setTimeout(() => setShareStatus(''), 1800);
       }
-    } catch (err) {
-      console.error('Sharing failed', err);
+    } catch (error) {
+      if (error?.name !== 'AbortError') setShareStatus('Try again');
     }
   };
-
-
 
   const downloadQuoteCard = () => {
     if (!quote) return;
-    const width = Math.min(800, window.innerWidth * 0.9);
-    const canvas = document.createElement("canvas");
+    const width = Math.min(900, window.innerWidth * 1.5);
+    const canvas = document.createElement('canvas');
     canvas.width = width;
-    canvas.height = width * 0.6;
-    const ctx = canvas.getContext("2d");
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    gradient.addColorStop(0, "#6b21a8");
-    gradient.addColorStop(1, "#b794f4");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "center";
-    ctx.font = "bold 28px serif";
-    const lines = wrapText(ctx, quote, canvas.width - 60);
-    lines.forEach((line, i) =>
-      ctx.fillText(line, canvas.width / 2, canvas.height / 2 - (lines.length - 1 - i) * 32)
-    );
-    ctx.font = "16px sans-serif";
-    ctx.fillText("Bhagavad Gita", canvas.width / 2, canvas.height - 30);
-    const link = document.createElement("a");
-    link.download = "wisdom-card.png";
-    link.href = canvas.toDataURL("image/png");
+    canvas.height = width * 0.68;
+    const context = canvas.getContext('2d');
+    const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, '#1d1812');
+    gradient.addColorStop(1, '#46351f');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.strokeStyle = '#c38b43';
+    context.lineWidth = 2;
+    context.strokeRect(28, 28, canvas.width - 56, canvas.height - 56);
+    context.fillStyle = '#f5ead5';
+    context.textAlign = 'center';
+    context.font = `500 ${Math.round(width * 0.038)}px Georgia`;
+    const lines = wrapText(context, `“${quote}”`, canvas.width - 150);
+    const lineHeight = width * 0.052;
+    const startY = canvas.height / 2 - ((lines.length - 1) * lineHeight) / 2;
+    lines.forEach((line, index) => context.fillText(line, canvas.width / 2, startY + index * lineHeight));
+    context.fillStyle = '#c38b43';
+    context.font = `600 ${Math.round(width * 0.017)}px Arial`;
+    context.letterSpacing = '4px';
+    context.fillText('INNERMAP · BHAGAVAD GITA', canvas.width / 2, canvas.height - 72);
+    const link = document.createElement('a');
+    link.download = 'innermap-wisdom-card.png';
+    link.href = canvas.toDataURL('image/png');
     link.click();
   };
-  const openPersonalityPDF = (type) => {
-    const url = personalityPDFs[type];
-    if (url) {
-      window.open(url, '_blank');
+
+  const openPersonalityPDF = () => {
+    const url = personalityPDFs[result?.type];
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const renderDashboard = () => {
+    const displayName = email ? email.split('@')[0] : 'seeker';
+    if (!result) {
+      return (
+        <div className="screen dashboard-screen">
+          <ScreenHeader eyebrow="Your inner terrain" title={`Good to see you, ${displayName}.`} description="A clear path begins with an honest reading of where you are." />
+          <section className="orientation-layout">
+            <div className="orientation-copy">
+              <p className="index-label">Orientation 01</p>
+              <h2>Three paths.<br /><em>One nature.</em></h2>
+              <p>Thirty reflections map how devotion, inquiry, and purposeful action already move through your life.</p>
+              <button className="button button--primary" type="button" onClick={beginAssessment}>
+                Read my inner compass <Icon name="arrowRight" />
+              </button>
+              <div className="assessment-meta" aria-label="Assessment details">
+                <span><strong>30</strong> reflections</span>
+                <span><strong>6</strong> archetypes</span>
+                <span><strong>~7</strong> minutes</span>
+              </div>
+            </div>
+            <div className="orientation-visual">
+              <CompassMap />
+              <p className="map-caption"><span /> Your pattern appears as you answer</p>
+            </div>
+          </section>
+          <blockquote className="dashboard-verse">
+            <p>“Yoga is the stilling of the changing states of the mind.”</p>
+            <cite>Yoga Sutra · 1.2</cite>
+          </blockquote>
+        </div>
+      );
     }
-  };
 
-  const toggleDarkMode = () => {
-    setDarkMode((prev) => !prev);
-  };
-
-  if (screen === 'home') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center p-5 overflow-y-auto">
-        <div className="bg-white rounded-3xl p-10 max-w-md w-full shadow-2xl transform transition-all hover:scale-105">
-          <div className="flex justify-end mb-2">
-            <button
-              onClick={toggleDarkMode}
-              className="text-sm text-purple-600 hover:text-purple-800"
-            >
-              {darkMode ? 'Light' : 'Dark'} Mode
-            </button>
+      <div className="screen dashboard-screen">
+        <ScreenHeader
+          eyebrow="Your inner terrain"
+          title={`Welcome back, ${displayName}.`}
+          description="Your map is not a label. It is a practice in motion."
+          action={<button className="button button--quiet" type="button" onClick={() => navigate('result')}>Open full reading <Icon name="arrowRight" /></button>}
+        />
+        <section className="mapped-dashboard">
+          <div className="mapped-dashboard__identity">
+            <div className="archetype-glyph">{personality.emoji}</div>
+            <p className="index-label">Current orientation</p>
+            <h2>{personality.name}</h2>
+            <p className="subtitle">{personality.subtitle}</p>
+            <p>{personality.description}</p>
+            <button className="text-link" type="button" onClick={beginAssessment}>Recalibrate the map <Icon name="refresh" size={17} /></button>
           </div>
-          <div className="text-center mb-8">
-            <div className="text-6xl mb-4">🧘‍♀️</div>
-            <h1 className="text-4xl font-extrabold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">Inner Map</h1>
-            <p className="text-gray-600 mt-2">Discover your spiritual path</p>
+          <div className="mapped-dashboard__map">
+            <CompassMap scores={result.scores} />
           </div>
-
-          <div className="mb-5">
-            <label className="block mb-2 text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
-              placeholder="your@email.com"
-            />
+          <div className="mapped-dashboard__scores">
+            <ScoreRow label="Devotion" value={result.scores.devotion} index={1} />
+            <ScoreRow label="Knowledge" value={result.scores.knowledge} index={2} />
+            <ScoreRow label="Action" value={result.scores.action} index={3} />
           </div>
-
-          <div className="mb-3">
-            <label className="block mb-2 text-sm font-medium text-gray-700">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
-              placeholder="••••••••"
-            />
+        </section>
+        <section className="daily-strip">
+          <div className="daily-strip__number">{String(new Date().getDate()).padStart(2, '0')}</div>
+          <div className="daily-strip__copy">
+            <p className="eyebrow">Today’s contemplation</p>
+            <p>{dailyInsight}</p>
           </div>
-
-          {loginError && (
-            <div className="text-red-500 mb-3 text-sm">{loginError}</div>
-          )}
-
-          <button
-            onClick={handleLogin}
-            className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg font-semibold hover:shadow-lg transform transition-all hover:-translate-y-1"
-          >
-            Sign In
+          <button className="icon-button" type="button" onClick={refreshInsight} aria-label="Show another contemplation"><Icon name="refresh" /></button>
+        </section>
+        <section className="dashboard-actions">
+          <button type="button" className="action-line" onClick={() => navigate('practices')}>
+            <span><Icon name="practice" /><i>Daily practice</i></span>
+            <strong>{completedPractices.filter((item) => item.date === new Date().toDateString()).length}/{personality.practices.length}</strong>
+            <Icon name="arrowRight" />
           </button>
-
-          <p className="text-center mt-5 text-sm text-gray-600">
-            Enter any email and password to continue
-          </p>
-        </div>
+          <button type="button" className="action-line" onClick={() => { resetFollowup(); navigate('followupQuiz'); }}>
+            <span><Icon name="spark" /><i>Refine this reading</i></span>
+            <strong>5 questions</strong>
+            <Icon name="arrowRight" />
+          </button>
+        </section>
       </div>
     );
-  }
+  };
 
-  if (screen === 'dashboard') {
-    return (
-      <div className="min-h-screen bg-gray-50 p-5 overflow-y-auto">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-extrabold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">Welcome back! 👋</h1>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setScreen('profile')}
-                className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                Profile
-              </button>
-              <button
-                onClick={toggleDarkMode}
-                className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                {darkMode ? 'Light' : 'Dark'} Mode
-              </button>
-              <button
-                onClick={handleSignOut}
-                className="px-5 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-
-          {streak > 0 && (
-            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-5 mb-6 text-white text-center">
-              <div className="text-2xl mb-1">🔥 {streak} Day Streak!</div>
-              <div className="text-sm opacity-90">Keep up the great work!</div>
-            </div>
-          )}
-
-          {result ? (
-            <div className="bg-white rounded-3xl p-10 shadow-xl mb-6">
-              <div className="text-center mb-8">
-                <div className="text-6xl mb-4">
-                  {personalityTypes[result.type].emoji}
-                </div>
-                <h2 className="text-3xl font-semibold text-gray-800 mb-2">
-                  {personalityTypes[result.type].name}
-                </h2>
-                <p className="text-xl text-gray-600">
-                  {personalityTypes[result.type].subtitle}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-6 mb-8">
-                <div className="text-center">
-                  <div className="text-sm text-purple-600 mb-1">Devotion</div>
-                  <div className="text-2xl font-bold text-purple-700">{result.scores.devotion}%</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-sm text-blue-600 mb-1">Knowledge</div>
-                  <div className="text-2xl font-bold text-blue-700">{result.scores.knowledge}%</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-sm text-green-600 mb-1">Action</div>
-                  <div className="text-2xl font-bold text-green-700">{result.scores.action}%</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => setScreen('practices')}
-                  className="py-3 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
-                >
-                  Daily Practices ✨
-                </button>
-                <button
-                  onClick={() => {
-                    setQuestionIndex(0);
-                    setAnswers([]);
-                    setScreen('quiz');
-                    setIsTransitioning(false);
-                    setSelectedAnswer(null);
-                  }}
-                  className="py-3 bg-white text-purple-600 border-2 border-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-all"
-                >
-                  Retake Assessment
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-3xl p-10 shadow-xl">
-              <h2 className="text-2xl font-semibold mb-5 text-gray-800">
-                Discover Your Spiritual Path
-              </h2>
-              <p className="mb-8 text-gray-600 leading-relaxed">
-                Take our comprehensive assessment with 30 questions to understand your unique spiritual personality
-                across three dimensions: Devotion, Knowledge, and Action.
-              </p>
-              <button
-                onClick={() => {
-                  setScreen('quiz');
-                  setIsTransitioning(false);
-                  setSelectedAnswer(null);
-                }}
-                className="px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg font-semibold hover:shadow-lg transform transition-all hover:-translate-y-1"
-              >
-                Start Assessment 🚀
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (screen === 'quiz') {
+  const renderQuiz = () => {
     const currentQuestion = questions[questionIndex];
     const progress = ((questionIndex + 1) / questions.length) * 100;
-
-    const handleAnswerWithAnimation = (answer) => {
-      setSelectedAnswer(answer);
-      setIsTransitioning(true);
-      setTimeout(() => {
-        handleAnswer(answer);
-        setIsTransitioning(false);
-        setSelectedAnswer(null);
-      }, 400);
-    };
-
-    const handlePreviousWithAnimation = () => {
-      if (questionIndex > 0) {
-        setIsTransitioning(true);
-        setTimeout(() => {
-          handlePreviousQuestion();
-          setIsTransitioning(false);
-        }, 200);
-      }
-    };
-
+    const categoryIndex = ['Devotion', 'Knowledge', 'Action'].indexOf(currentQuestion.category);
     return (
-      <div className="min-h-screen bg-gray-50 p-5 flex items-center justify-center overflow-y-auto">
-        <div className="bg-white rounded-3xl p-10 max-w-2xl w-full shadow-xl relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-transparent opacity-50 pointer-events-none" />
-
-          <div className="relative z-10">
-            <div className="mb-8">
-              <div className="flex justify-between items-center mb-5">
-                <span className="text-sm text-gray-600 animate-fade-in">
-                  Question {questionIndex + 1} of {questions.length}
-                </span>
-                <span className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full animate-bounce">
-                  {currentQuestion.category}
-                </span>
-              </div>
-              <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden shadow-inner">
-                <div
-                  className="h-full bg-gradient-to-r from-purple-600 to-purple-800 transition-all duration-700 ease-out relative overflow-hidden"
-                  style={{ width: `${progress}%` }}
+      <div className="screen quiz-screen">
+        <div className="quiz-topline">
+          <button className="text-link" type="button" onClick={() => navigate('dashboard')}><Icon name="arrowLeft" /> Save & exit</button>
+          <span className="numeric">{String(questionIndex + 1).padStart(2, '0')} / {questions.length}</span>
+        </div>
+        <div className="quiz-layout">
+          <aside className="quiz-route" aria-label="Assessment path">
+            <p className="eyebrow">Inner reading</p>
+            <div className="quiz-route__map"><CompassMap compact progress={progress} /></div>
+            <ol>
+              {['Devotion', 'Knowledge', 'Action'].map((category, index) => (
+                <li key={category} className={index === categoryIndex ? 'is-current' : index < categoryIndex ? 'is-complete' : ''}>
+                  <span>{index < categoryIndex ? <Icon name="check" size={14} /> : index + 1}</span>{category}
+                </li>
+              ))}
+            </ol>
+          </aside>
+          <main className={`question-stage ${isTransitioning ? 'is-transitioning' : ''}`}>
+            <p className="question-stage__category">Path of {currentQuestion.category}</p>
+            <h1>{currentQuestion.text}</h1>
+            <p className="question-stage__instruction">Choose the response that feels true before you explain it.</p>
+            <div className="answer-list" role="radiogroup" aria-label="Answer choices">
+              {currentQuestion.options.map((option, index) => (
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedAnswer === option}
+                  key={option}
+                  disabled={isTransitioning}
+                  className={`answer-option ${selectedAnswer === option ? 'is-selected' : ''}`}
+                  onClick={() => handleAnswer(option)}
                 >
-                  <div
-                    className="absolute inset-0 -inset-x-full bg-gradient-to-r from-transparent via-white to-transparent opacity-30"
-                    style={{ animation: 'shimmer 2s infinite', animationDelay: '1s' }}
-                  />
-                </div>
-              </div>
+                  <span className="answer-option__index">{index + 1}</span>
+                  <span>{option}</span>
+                  <i><Icon name="arrowRight" size={18} /></i>
+                </button>
+              ))}
             </div>
-
-            <div
-              className="transition-all duration-300"
-              style={{
-                opacity: isTransitioning ? 0 : 1,
-                transform: isTransitioning ? 'scale(0.95)' : 'scale(1)'
-              }}
-            >
-              <h2
-                className="text-2xl font-semibold mb-8 text-gray-800 text-center leading-relaxed"
-                style={{ animation: 'slideIn 0.6s ease-out' }}
-              >
-                {currentQuestion.text}
-              </h2>
-
-              <div className="grid gap-3">
-                {currentQuestion.options.map((option, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleAnswerWithAnimation(option)}
-                    disabled={isTransitioning}
-                    className={`
-                      p-4 rounded-xl font-medium transition-all duration-300 relative overflow-hidden
-                      ${selectedAnswer === option
-                        ? 'bg-purple-600 text-white shadow-lg'
-                        : 'bg-gray-50 border-2 border-gray-200 text-gray-700 hover:bg-purple-50 hover:border-purple-300 hover:shadow-md'}
-                      ${isTransitioning && selectedAnswer !== option ? 'opacity-50' : ''}
-                    `}
-                    style={{
-                      animation: `fadeInUp 0.5s ease-out ${index * 50}ms both`,
-                      transform: selectedAnswer === option ? 'scale(1.05)' : 'scale(1)',
-                      transition: 'all 0.3s ease-out'
-                    }}
-                  >
-                    <span className={`inline-flex items-center justify-center w-full ${selectedAnswer === option ? 'animate-pulse' : ''}`}>
-                      {option}
-                      {selectedAnswer === option && (
-                        <svg className="w-5 h-5 ml-2" fill="currentColor" viewBox="0 0 20 20" style={{ animation: 'bounceIn 0.6s ease-out' }}>
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </span>
-                    {selectedAnswer === option && (
-                      <span className="absolute inset-0 bg-white opacity-20" style={{ animation: 'ripple 0.6s ease-out' }} />
-                    )}
-                  </button>
-                ))}
-              </div>
+            <div className="question-stage__footer">
+              <button className="button button--quiet" type="button" onClick={handlePreviousQuestion} disabled={questionIndex === 0 || isTransitioning}><Icon name="arrowLeft" /> Previous</button>
+              <p>Your answers stay in this browser.</p>
             </div>
+          </main>
+        </div>
+      </div>
+    );
+  };
 
-            <div className="mt-8 flex justify-between animate-fade-in">
-              <button
-                onClick={handlePreviousWithAnimation}
-                className={`
-                  px-5 py-2 rounded-lg font-medium transition-all duration-200
-                  ${questionIndex === 0
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-md active:scale-95'}
-                `}
-                disabled={questionIndex === 0 || isTransitioning}
-              >
-                ← Previous
-              </button>
-              <button
-                onClick={() => {
-                  setScreen('dashboard');
-                  setIsTransitioning(false);
-                  setSelectedAnswer(null);
-                }}
-                className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-all duration-200 hover:shadow-md active:scale-95"
-                disabled={isTransitioning}
-              >
-                Exit
-              </button>
-            </div>
+  const renderResult = () => {
+    if (!result) return renderDashboard();
+    return (
+      <div className="screen result-screen">
+        <div className="result-intro">
+          <p className="eyebrow">Your reading · complete</p>
+          <div className="result-intro__map"><CompassMap scores={result.scores} progress={100} /></div>
+          <div className="result-intro__copy">
+            <span className="archetype-glyph">{personality.emoji}</span>
+            <h1>{personality.name}</h1>
+            <p className="subtitle">{personality.subtitle}</p>
+            <p>{personality.description}</p>
           </div>
+          <p className="result-intro__note">This is an orientation, not a verdict.</p>
         </div>
 
-        <style>{`
-          @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-          @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          @keyframes bounceIn {
-            0% { opacity: 0; transform: scale(0.3); }
-            50% { opacity: 1; transform: scale(1.05); }
-            70% { transform: scale(0.9); }
-            100% { transform: scale(1); }
-          }
-          @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
-          @keyframes ripple {
-            0% { transform: scale(0); opacity: 1; }
-            100% { transform: scale(2); opacity: 0; }
-          }
-          .animate-fade-in { animation: fadeIn 0.5s ease-out; }
-          .im-dark { background-color: #0d1117; color: #f7fafc; transition: background-color 0.3s ease; }
-          .im-dark .bg-white { background-color: #202733 !important; }
-          .im-dark .text-gray-800 { color: #f7fafc !important; }
-          .im-dark input { background-color: #374151; color: #f7fafc; }
-          .im-dark .bg-gray-50 { background-color: #1a202c; }
-          .im-dark .text-gray-700 { color: #e2e8f0; }
-          .im-dark .bg-gray-100 { background-color: #374151; }
-          .im-dark .bg-gray-200 { background-color: #4a5568; }
-          .im-dark .bg-gray-300 { background-color: #4a5568; }
-          .im-dark .border-gray-300 { border-color: #4a5568; }
-          .im-dark .text-gray-500 { color: #a0aec0; }
-          img { max-width: 100%; height: auto; }
-          .im-dark img { opacity: 0.9; }
-      `}</style>
-    </div>
-  );
-  }
+        <div className="reading-layout">
+          <section className="reading-scores">
+            <p className="index-label">Reading 01 · Your balance</p>
+            <h2>The shape of your attention</h2>
+            <ScoreRow label="Devotion" value={result.scores.devotion} index={1} />
+            <ScoreRow label="Knowledge" value={result.scores.knowledge} index={2} />
+            <ScoreRow label="Action" value={result.scores.action} index={3} />
+          </section>
+          <aside className="reading-guidance">
+            <p className="index-label">Reading 02 · Gita guidance</p>
+            {guidance && (
+              <>
+                <span className="verse-ref">{guidance.verse}</span>
+                <blockquote>“{guidance.text}”</blockquote>
+                <p>{guidance.guidance}</p>
+              </>
+            )}
+          </aside>
+        </div>
 
-  if (screen === 'followupQuiz' && result) {
+        <section className="wisdom-panel">
+          <div>
+            <p className="eyebrow">A verse for today</p>
+            <blockquote>“{quote}”</blockquote>
+            <cite>Bhagavad Gita</cite>
+          </div>
+          <div className="wisdom-panel__actions">
+            <button className="button button--quiet" type="button" onClick={refreshInsight}><Icon name="refresh" /> New verse</button>
+            <button className="button button--quiet" type="button" onClick={downloadQuoteCard}><Icon name="download" /> Save card</button>
+          </div>
+        </section>
+
+        <section className="result-actions">
+          <div>
+            <p className="eyebrow">Put the reading into motion</p>
+            <h2>Insight becomes useful when it enters the day.</h2>
+          </div>
+          <div className="result-actions__buttons">
+            <button className="button button--primary" type="button" onClick={() => navigate('practices')}>Begin today’s practice <Icon name="arrowRight" /></button>
+            <button className="button button--quiet" type="button" onClick={() => { resetFollowup(); navigate('followupQuiz'); }}>Refine this reading</button>
+            <button className="button button--quiet" type="button" onClick={shareResult}><Icon name="share" /> {shareStatus || 'Share result'}</button>
+            <button className="button button--quiet" type="button" onClick={openPersonalityPDF}><Icon name="book" /> Open guide</button>
+          </div>
+        </section>
+      </div>
+    );
+  };
+
+  const renderFollowupQuiz = () => {
+    if (!result) return renderDashboard();
     const list = followupQuestions[result.type] || [];
     const current = list[followupIndex];
     const progress = ((followupIndex + 1) / list.length) * 100;
     return (
-      <div className="min-h-screen bg-gray-50 p-5 flex items-center justify-center overflow-y-auto">
-        <div className="bg-white rounded-3xl p-10 max-w-2xl w-full shadow-xl relative">
-          <div className="mb-6 text-center">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">More Insight</h2>
-            <p className="text-gray-600">Question {followupIndex + 1} of {list.length}</p>
-            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mt-2">
-              <div className="h-full bg-purple-600" style={{ width: `${progress}%` }} />
-            </div>
-          </div>
-          <h3 className="text-xl font-medium mb-5 text-gray-800 text-center">{current}</h3>
-          <div className="grid gap-3">
-            {['Never','Rarely','Sometimes','Often','Always'].map((opt) => (
-              <button
-                key={opt}
-                onClick={() => handleFollowupAnswer(opt)}
-                className="bg-gray-50 border-2 border-gray-200 text-gray-700 rounded-lg p-3 hover:bg-purple-50 hover:border-purple-300"
-              >
-                {opt}
+      <div className="screen followup-screen">
+        <div className="quiz-topline">
+          <button className="text-link" type="button" onClick={() => navigate('result')}><Icon name="arrowLeft" /> Back to reading</button>
+          <span className="numeric">{String(followupIndex + 1).padStart(2, '0')} / {list.length}</span>
+        </div>
+        <main className="followup-stage">
+          <div className="followup-stage__meter"><span style={{ '--progress': `${progress}%` }} /></div>
+          <p className="eyebrow">Refine the map</p>
+          <h1>{current}</h1>
+          <div className="answer-list" role="radiogroup" aria-label="Answer choices">
+            {answerScale.map((option, index) => (
+              <button type="button" role="radio" aria-checked="false" key={option} className="answer-option" onClick={() => handleFollowupAnswer(option)}>
+                <span className="answer-option__index">{index + 1}</span><span>{option}</span><i><Icon name="arrowRight" size={18} /></i>
               </button>
             ))}
           </div>
-          <button
-            onClick={() => { resetFollowup(); setScreen('dashboard'); }}
-            className="mt-6 px-5 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300"
-          >
-            Exit
-          </button>
-        </div>
+        </main>
       </div>
     );
-  }
+  };
 
-  if (screen === 'result') {
-    const personality = personalityTypes[result.type];
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center p-5 overflow-y-auto">
-        <div className="bg-white rounded-3xl p-10 max-w-2xl w-full shadow-2xl text-center">
-          <div className="text-8xl mb-5 animate-bounce">{personality.emoji}</div>
-          <h1 className="text-3xl font-extrabold mb-4 bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">Your Spiritual Path Revealed!</h1>
-          <h2 className="text-3xl font-semibold mb-3 bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">{personality.name}</h2>
-          <p className="text-xl text-gray-600 mb-5">{personality.subtitle}</p>
-          <p className="mb-8 text-gray-700 leading-relaxed">{personality.description}</p>
-          <div className="bg-gray-50 rounded-2xl p-6 mb-8">
-            <h3 className="text-lg font-semibold mb-4 text-gray-800">Your Path Strengths</h3>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between mb-1"><span className="text-purple-700">💜 Devotion</span><span className="font-bold text-purple-700">{result.scores.devotion}%</span></div>
-                <div className="w-full h-2 bg-purple-100 rounded-full overflow-hidden"><div className="h-full bg-purple-600 transition-all duration-1000" style={{ width: `${result.scores.devotion}%` }} /></div>
-              </div>
-              <div>
-                <div className="flex justify-between mb-1"><span className="text-blue-700">🧠 Knowledge</span><span className="font-bold text-blue-700">{result.scores.knowledge}%</span></div>
-                <div className="w-full h-2 bg-blue-100 rounded-full overflow-hidden"><div className="h-full bg-blue-600 transition-all duration-1000" style={{ width: `${result.scores.knowledge}%` }} /></div>
-              </div>
-              <div>
-                <div className="flex justify-between mb-1"><span className="text-green-700">⚡ Action</span><span className="font-bold text-green-700">{result.scores.action}%</span></div>
-                <div className="w-full h-2 bg-green-100 rounded-full overflow-hidden"><div className="h-full bg-green-600 transition-all duration-1000" style={{ width: `${result.scores.action}%` }} /></div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-purple-50 rounded-2xl p-6 mb-8">
-            <h3 className="text-lg font-semibold mb-2 text-purple-800">Daily Insight</h3>
-            <p className="text-gray-700">{dailyInsight}</p>
-            <button
-              onClick={refreshInsight}
-              className="mt-3 text-sm text-purple-600 underline"
-            >
-              New Insight
-            </button>
-          </div>
-          {guidance && (
-            <div className="bg-white rounded-2xl p-6 mb-8 shadow-md">
-              <h3 className="text-lg font-semibold mb-2 text-purple-800">Gita Guidance</h3>
-              <p className="text-gray-800 font-medium mb-1">{guidance.verse}</p>
-              <p className="text-gray-700 italic mb-3">"{guidance.text}"</p>
-              <p className="text-gray-700">{guidance.guidance}</p>
-            </div>
-          )}
-          <div className="bg-white rounded-2xl p-6 mb-8 shadow-md">
-            <h3 className="text-lg font-semibold mb-2 text-purple-800">Wisdom Quote</h3>
-            <p className="text-gray-700 italic">{quote}</p>
-            <button onClick={downloadQuoteCard} className="mt-3 text-sm text-purple-600 underline">Download Card</button>
-          </div>
-          <div className="grid gap-3">
-            <button
-              onClick={shareResult}
-              className="py-3 bg-green-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
-            >
-              Share Result 📤
-            </button>
-            <button
-              onClick={() => openPersonalityPDF(result.type)}
-              className="py-3 bg-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
-            >
-              View Guide 📄
-            </button>
-            <button
-              onClick={() => {
-                resetFollowup();
-                setScreen('followupQuiz');
-              }}
-              className="py-3 bg-yellow-50 text-purple-700 border-2 border-purple-600 rounded-lg font-semibold hover:bg-yellow-100 transition-all"
-            >
-              Deepen Insight
-            </button>
-            <button onClick={() => setScreen('dashboard')} className="py-3 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg font-semibold hover:shadow-lg transition-all">Continue to Dashboard</button>
-            <button onClick={() => { setQuestionIndex(0); setAnswers([]); setScreen('quiz'); setIsTransitioning(false); setSelectedAnswer(null); }} className="py-3 bg-white text-purple-600 border-2 border-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-all">Take Again</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const renderFollowupResult = () => (
+    <div className="screen followup-result-screen">
+      <div className="followup-result__seal"><BrandMark /></div>
+      <p className="eyebrow">Second reading</p>
+      <h1>Your map is becoming more precise.</h1>
+      <p className="followup-result__message">{result ? followupInsights[result.type] : ''}</p>
+      <div className="followup-result__score"><strong>{followupScore}%</strong><span>alignment with this archetype</span></div>
+      <button className="button button--primary" type="button" onClick={() => navigate('result')}>Return to my reading <Icon name="arrowRight" /></button>
+    </div>
+  );
 
-  if (screen === 'followupResult' && result) {
-    const personality = personalityTypes[result.type];
-    const message = followupInsights[result.type];
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center p-5 overflow-y-auto">
-        <div className="bg-white rounded-3xl p-10 max-w-xl w-full shadow-2xl text-center">
-          <div className="text-7xl mb-4">{personality.emoji}</div>
-          <h2 className="text-2xl font-semibold mb-3 text-gray-800">Thanks for digging deeper!</h2>
-          <p className="text-lg text-gray-700 mb-6">{message}</p>
-          {followupScore !== null && (
-            <p className="text-gray-600 mb-6">Insight score: {followupScore}%</p>
-          )}
-          <button
-            onClick={() => setScreen('dashboard')}
-            className="py-3 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
-          >
-            Back to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (screen === 'practices') {
-    const personality = result ? personalityTypes[result.type] : null;
+  const renderPractices = () => {
     const today = new Date().toDateString();
-    const todaysPractices = completedPractices.filter(p => p.date === today);
+    const todaysPractices = completedPractices.filter((item) => item.date === today);
+    if (!personality) {
+      return (
+        <div className="screen empty-screen">
+          <BrandMark />
+          <p className="eyebrow">Practice needs direction</p>
+          <h1>Read your inner compass first.</h1>
+          <p>Your practice set is shaped by the balance found in the assessment.</p>
+          <button className="button button--primary" type="button" onClick={beginAssessment}>Begin the assessment <Icon name="arrowRight" /></button>
+        </div>
+      );
+    }
     return (
-      <div className="min-h-screen bg-gray-50 p-5 overflow-y-auto">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center mb-8">
-            <button onClick={() => setScreen('dashboard')} className="text-2xl mr-3 hover:text-purple-600 transition-colors">←</button>
-            <h1 className="text-3xl font-extrabold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">Daily Practices</h1>
-          </div>
-          {personality ? (
-            <div>
-              <div className="bg-gradient-to-r from-purple-600 to-purple-800 rounded-3xl p-8 mb-6 text-white text-center">
-                <div className="text-5xl mb-3">{personality.emoji}</div>
-                <h2 className="text-2xl mb-2">Today's Practice for {personality.name}</h2>
-                <p className="text-base opacity-90">{todaysPractices.length} of {personality.practices.length} completed today</p>
-              </div>
+      <div className="screen practices-screen">
+        <ScreenHeader
+          eyebrow="Daily fieldwork"
+          title="Turn insight into practice."
+          description={`Five contemplations for ${personality.name}. Complete one with full attention, or move through all five.`}
+          action={<div className="streak-badge"><Icon name="flame" /><strong>{streak}</strong><span>day streak</span></div>}
+        />
+        <div className="practice-progress">
+          <span style={{ '--progress': `${(todaysPractices.length / personality.practices.length) * 100}%` }} />
+          <p><strong>{todaysPractices.length}</strong> of {personality.practices.length} completed today</p>
+        </div>
+        <ol className="practice-list">
           {personality.practices.map((practice, index) => {
-            const isCompleted = todaysPractices.some(p => p.practiceIndex === index);
+            const isCompleted = todaysPractices.some((item) => item.practiceIndex === index);
             return (
-              <div key={index} className={`bg-white rounded-2xl p-5 mb-4 shadow-md ${isCompleted ? 'opacity-70' : ''} transition-opacity`}>
-                    <div className="flex items-start justify-between">
-                      <p className="text-gray-700 leading-relaxed flex-1 mr-3">{practice}</p>
-                      <button onClick={() => !isCompleted && handlePracticeComplete(index)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isCompleted ? 'bg-green-500 text-white cursor-default' : 'bg-gray-100 text-gray-700 hover:bg-purple-100 hover:text-purple-700'}`} disabled={isCompleted}>{isCompleted ? '✓ Done' : 'Complete'}</button>
-                    </div>
-              </div>
+              <li key={practice} className={isCompleted ? 'is-complete' : ''}>
+                <span className="practice-list__index">{String(index + 1).padStart(2, '0')}</span>
+                <p>{practice}</p>
+                <button type="button" className="practice-check" onClick={() => handlePracticeComplete(index)} disabled={isCompleted}>
+                  <Icon name="check" /> {isCompleted ? 'Completed' : 'Mark complete'}
+                </button>
+              </li>
             );
           })}
-          <button
-            onClick={() => result && openPersonalityPDF(result.type)}
-            className="w-full mt-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
-          >
-            Open Full Guide
-          </button>
-        </div>
-      ) : (
-            <div className="bg-white rounded-3xl p-10 text-center">
-              <div className="text-6xl mb-5">🎯</div>
-              <p className="text-lg text-gray-700 mb-6">Complete your assessment to receive personalized practices</p>
-              <button onClick={() => { setScreen('quiz'); setIsTransitioning(false); setSelectedAnswer(null); }} className="px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg font-semibold hover:shadow-lg transition-all">Take Assessment</button>
-            </div>
-          )}
+        </ol>
+        <div className="practice-footer">
+          <p>Return tomorrow. The question may be the same; the person meeting it will not be.</p>
+          <button className="button button--quiet" type="button" onClick={() => navigate('dashboard')}>Return to map</button>
         </div>
       </div>
     );
-  }
+  };
 
-  if (screen === 'profile') {
+  const renderProfile = () => {
+    const initials = email ? email.slice(0, 2).toUpperCase() : 'IM';
     return (
-      <div className="min-h-screen bg-gray-50 p-5 overflow-y-auto">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center mb-8">
-            <button onClick={() => setScreen('dashboard')} className="text-2xl mr-3 hover:text-purple-600 transition-colors">←</button>
-            <h1 className="text-3xl font-extrabold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">Your Profile</h1>
+      <div className="screen profile-screen">
+        <ScreenHeader eyebrow="The observer" title="Your profile" description="Your reading and practice history live only in this browser." />
+        <section className="profile-identity">
+          <div className="profile-avatar">{initials}</div>
+          <div>
+            <p className="eyebrow">Seeker record</p>
+            <h2>{email || 'Spiritual seeker'}</h2>
+            <p>{personality ? `${personality.name} · ${personality.subtitle}` : 'Assessment not yet completed'}</p>
           </div>
-
-          <div className="bg-white rounded-3xl p-8 mb-6 text-center shadow-xl">
-            <div className="w-24 h-24 bg-gradient-to-r from-purple-600 to-purple-800 rounded-full flex items-center justify-center mx-auto mb-5 text-4xl text-white">
-              {email ? email[0].toUpperCase() : 'U'}
-            </div>
-
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-              {email || 'Spiritual Seeker'}
-            </h2>
-
-            {result && (
-              <div className="bg-gray-50 rounded-2xl p-5 mt-5">
-                <div className="text-4xl mb-3">{personalityTypes[result.type].emoji}</div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-1">{personalityTypes[result.type].name}</h3>
-                <p className="text-gray-600">{personalityTypes[result.type].subtitle}</p>
-              </div>
-            )}
+          {personality && <div className="profile-identity__glyph">{personality.emoji}</div>}
+        </section>
+        <section className="profile-ledger">
+          <div><span>Current streak</span><strong>{streak}<small> days</small></strong></div>
+          <div><span>Practices completed</span><strong>{completedPractices.length}</strong></div>
+          <div><span>Assessment</span><strong>{result ? 'Complete' : 'Open'}</strong></div>
+        </section>
+        <section className="profile-settings">
+          <div>
+            <p className="eyebrow">Appearance</p>
+            <h2>Reading atmosphere</h2>
           </div>
-
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-white rounded-2xl p-5 text-center shadow-md">
-              <div className="text-3xl mb-1">🔥</div>
-              <div className="text-2xl font-bold text-red-500">{streak}</div>
-              <div className="text-sm text-gray-600">Day Streak</div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-5 text-center shadow-md">
-              <div className="text-3xl mb-1">✅</div>
-              <div className="text-2xl font-bold text-green-500">{completedPractices.length}</div>
-              <div className="text-sm text-gray-600">Total Completed</div>
-            </div>
-          </div>
-
-          <button onClick={handleResetData} className="w-full py-3 bg-red-100 text-red-600 rounded-lg font-semibold hover:bg-red-200 transition-colors">
-            Reset All Data
-          </button>
-        </div>
+          <ThemeButton darkMode={darkMode} onClick={() => setDarkMode((current) => !current)} />
+        </section>
+        <section className="danger-zone">
+          <div><p className="eyebrow">Local data</p><p>Remove your result, practice history, and streak from this browser.</p></div>
+          <button className="button button--danger" type="button" onClick={handleResetData}><Icon name="trash" /> Reset my map</button>
+        </section>
       </div>
     );
-  }
+  };
 
-  if (showAchievement) {
+  const activeNav = ['result', 'followupQuiz', 'followupResult'].includes(screen) ? 'quiz' : screen;
+  const renderCurrentScreen = () => {
+    if (screen === 'dashboard') return renderDashboard();
+    if (screen === 'quiz') return renderQuiz();
+    if (screen === 'result') return renderResult();
+    if (screen === 'followupQuiz') return renderFollowupQuiz();
+    if (screen === 'followupResult') return renderFollowupResult();
+    if (screen === 'practices') return renderPractices();
+    if (screen === 'profile') return renderProfile();
+    return renderDashboard();
+  };
+
+  if (screen === 'home') {
     return (
-      <>
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl p-8 text-center transform scale-110 animate-bounce">
-            <div className="text-6xl mb-3">🏆</div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Achievement Unlocked!</h2>
-            <p className="text-lg text-gray-600">{achievementText}</p>
-          </div>
+      <main className="entry-screen">
+        <div className="entry-screen__geometry" aria-hidden="true">
+          <CompassMap />
         </div>
-      </>
+        <header className="entry-nav">
+          <a className="brand" href="#top" aria-label="InnerMap home"><BrandMark compact /><span>InnerMap</span></a>
+          <ThemeButton darkMode={darkMode} onClick={() => setDarkMode((current) => !current)} />
+        </header>
+        <section className="entry-story" id="top">
+          <div className="entry-story__content">
+            <p className="eyebrow">Psychology · timeless wisdom · daily practice</p>
+            <h1>Know the path<br />already moving<br /><em>through you.</em></h1>
+            <p className="entry-story__lead">InnerMap reads your natural balance of devotion, inquiry, and action—then turns that understanding into a practice you can live.</p>
+            <div className="entry-story__facts">
+              <span><strong>30</strong> reflective questions</span>
+              <span><strong>03</strong> paths in balance</span>
+              <span><strong>01</strong> personal compass</span>
+            </div>
+          </div>
+          <div className="entry-story__aside">
+            <p>Bhakti</p><span>heart</span><p>Jñāna</p><span>mind</span><p>Karma</p><span>hands</span>
+          </div>
+        </section>
+        <aside className="entry-panel">
+          <div className="entry-panel__heading">
+            <BrandMark />
+            <p className="eyebrow">Private entry</p>
+            <h2>Open your inner map.</h2>
+            <p>This demo stores your reading on this device. Any non-empty credentials will continue.</p>
+          </div>
+          <form onSubmit={handleLogin} noValidate>
+            <label htmlFor="email">Email address</label>
+            <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="you@example.com" aria-describedby={loginError ? 'login-error' : 'login-help'} />
+            <label htmlFor="password">Passphrase</label>
+            <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" placeholder="Enter any passphrase" aria-describedby={loginError ? 'login-error' : 'login-help'} />
+            {loginError ? <p className="form-message form-message--error" id="login-error" role="alert">{loginError}</p> : <p className="form-message" id="login-help">Local-only demo · nothing is sent</p>}
+            <button className="button button--primary button--full" type="submit">Enter the map <Icon name="arrowRight" /></button>
+          </form>
+          <blockquote><span>“</span>As the mind, so the world.<cite>Upanishads</cite></blockquote>
+        </aside>
+      </main>
     );
   }
 
-  return null;
+  return (
+    <div className="app-shell">
+      <aside className="side-rail">
+        <button className="brand brand--button" type="button" onClick={() => navigate('dashboard')} aria-label="Go to InnerMap dashboard"><BrandMark compact /><span>InnerMap</span></button>
+        <nav aria-label="Primary navigation">
+          {navItems.map((item) => (
+            <button key={item.id} type="button" className={activeNav === item.id ? 'is-active' : ''} onClick={() => item.id === 'quiz' ? beginAssessment() : navigate(item.id)}>
+              <Icon name={item.icon} /><span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="side-rail__utilities">
+          <ThemeButton darkMode={darkMode} onClick={() => setDarkMode((current) => !current)} label={false} />
+          <button className="icon-button" type="button" onClick={handleSignOut} aria-label="Sign out"><Icon name="logout" /></button>
+        </div>
+      </aside>
+      <div className="mobile-bar">
+        <button className="brand brand--button" type="button" onClick={() => navigate('dashboard')}><BrandMark compact /><span>InnerMap</span></button>
+        <div><ThemeButton darkMode={darkMode} onClick={() => setDarkMode((current) => !current)} label={false} /><button className="icon-button" type="button" onClick={handleSignOut} aria-label="Sign out"><Icon name="logout" /></button></div>
+      </div>
+      <main className="app-content">{renderCurrentScreen()}</main>
+      <nav className="mobile-dock" aria-label="Mobile navigation">
+        {navItems.map((item) => (
+          <button key={item.id} type="button" className={activeNav === item.id ? 'is-active' : ''} onClick={() => item.id === 'quiz' ? beginAssessment() : navigate(item.id)}>
+            <Icon name={item.icon} /><span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
+      {showAchievement && (
+        <dialog open className="achievement-dialog" aria-labelledby="achievement-title">
+          <BrandMark />
+          <p className="eyebrow">Practice milestone</p>
+          <h2 id="achievement-title">{achievementText}</h2>
+          <p>Consistency is beginning to leave a shape.</p>
+          <button className="button button--primary" type="button" onClick={() => setShowAchievement(false)}>Continue</button>
+        </dialog>
+      )}
+    </div>
+  );
 };
 
 export default InnerMapApp;
